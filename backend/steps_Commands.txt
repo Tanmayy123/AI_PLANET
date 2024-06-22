@@ -1,0 +1,23 @@
+// The commands and steps to run this project which has a ability to give answers tothe questions asked by the user based on the data of the pdf file which is uploaded
+
+// backend
+
+Steps:
+1. Install all the needed dependencies 
+2. Install docker
+3. Create container in docker
+4. Use uvicorn to run the backend server
+
+
+// Commands
+
+1. cd AI_PLANET
+2. pip install all_required_packages
+3. docker pull qdrant/qdrant
+4. docker run -d --name qdrant -p 8000:6333 qdrant/qdrant
+5. docker start qdrant
+6. set COHERE_API_KEY=your-cohere-api-key
+   set GROQ_API_KEY=your-groq-api-key
+7. echo COHERE_API_KEY=your-cohere-api-key > .env
+   echo GROQ_API_KEY=your-groq-api-key >> .env
+8. python -m uvicorn main:app --reload

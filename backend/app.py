@@ -37,6 +37,7 @@ qdrant_api_key = os.getenv("QDRANT_API_KEY")
 qdrant_client = QdrantClient(
     url=qdrant_api_url, 
     api_key=qdrant_api_key,
+    port=8000  # Set Qdrant service port to 8000
 )
 
 groq_api_key = os.getenv("GROQ_API_KEY")

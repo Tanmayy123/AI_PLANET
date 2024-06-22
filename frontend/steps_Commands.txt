@@ -1,0 +1,15 @@
+// Commands and steps to run frontend of this amazing project
+
+
+//Steps
+
+1. install node
+2. download all the dependencies required 
+
+
+// Commands to run the frontend
+
+1. cd AI_PLANET
+2. cd frontend
+3. npm install (if node packages are not installed)
+4. npm start  

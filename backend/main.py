@@ -1,12 +1,12 @@
-#used for testing
-
 import os
+import re
 import shutil
+from typing import List
 
 import cohere
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain.text_splitter import CharacterTextSplitter
@@ -16,6 +16,7 @@ from langchain_groq import ChatGroq
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
+from keybert import KeyBERT
 
 app = FastAPI()
 
@@ -39,11 +40,13 @@ qdrant_api_key = os.getenv("QDRANT_API_KEY")
 qdrant_client = QdrantClient(
     url=qdrant_api_url, 
     api_key=qdrant_api_key,
+    port=8000  # Ensure this matches your Docker setup
 )
 
 groq_api_key = os.getenv("GROQ_API_KEY")
 groq_chat = ChatGroq(temperature=0.7, groq_api_key=groq_api_key, model_name="mixtral-8x7b-32768")
 
+kw_model = KeyBERT()
 
 @app.post("/upload/")
 async def upload_pdf(pdf_file: UploadFile = File(...)):
@@ -94,7 +97,7 @@ class QueryRequest(BaseModel):
     collection_name: str
     query: str
 
-# Endpoint for querying the database and generating responses
+
 @app.post("/query/")
 async def query_database(request: QueryRequest):
     query_embedding = cohere_client.embed(texts=[request.query]).embeddings[0]
@@ -105,10 +108,16 @@ async def query_database(request: QueryRequest):
     for result in search_result:
         context += result.payload["text"] + "\n"
 
+    # Extract keywords from the query
+    keywords = extract_keywords(request.query)
+
+    # Highlight these keywords in the context
+    highlighted_context = highlight_keywords(context, keywords)
+
     async def response_generator():
         system_message = "You are a question-answering assistant. You are given relevant context. Answer only in Markdown format. Use newlines, Use backticks for code. Do not mention markdown or code anywhere. Only answer what is asked and keep it concise."
         human_message = f"""### Question: {request.query}
-        ### Context: {context}
+        ### Context: {highlighted_context}
         !!! Remember to answer in markdown format
         ### Answer:"""
 
@@ -119,6 +128,17 @@ async def query_database(request: QueryRequest):
             yield chunk.content
 
     return StreamingResponse(response_generator(), media_type="text/plain")
+
+
+def extract_keywords(text: str) -> List[str]:
+    keywords = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 2), stop_words='english')
+    return [kw[0] for kw in keywords]
+
+
+def highlight_keywords(text: str, keywords: List[str]) -> str:
+    for keyword in keywords:
+        text = re.sub(f"(?i)({keyword})", r"**\1**", text)
+    return text
 
 
 if __name__ == "__main__":
